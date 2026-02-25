@@ -271,6 +271,48 @@ function switchView(view) {
   }
 }
 
+// ── Office 事件處理 ──────────────────────────────────────────────────────────
+function handleOfficeEvent(msg) {
+  if (msg.event === 'message') {
+    const from = OfficeCharacters.getByName(msg.from);
+    const to = OfficeCharacters.getByName(msg.to);
+    if (from && to) {
+      OfficeEffects.sendEnvelope(from, to);
+    }
+    Notifications.showToast(msg.from + ' → ' + msg.to + ': ' + msg.summary, '✉️');
+  }
+
+  if (msg.event === 'task_completed') {
+    const char = OfficeCharacters.getByName(msg.agent);
+    if (char) {
+      char._previousState = char.state;
+      char.state = OfficeCharacters.STATES.CELEBRATE;
+      char.frame = 0;
+      OfficeEffects.spawnCelebration(char);
+    }
+    Notifications.showToast(msg.agent + ' 完成：' + msg.task, '✅');
+  }
+
+  if (msg.event === 'task_assigned') {
+    const char = OfficeCharacters.getByName(msg.agent);
+    if (char) {
+      char.task = msg.task;
+      char.setState('typing');
+    }
+    Notifications.showToast(msg.task + ' → ' + msg.agent, '📋');
+  }
+
+  if (msg.event === 'shutdown') {
+    OfficeEffects.flashRed();
+    Notifications.showToast('Team Lead 正在收工', '📢');
+  }
+
+  if (msg.event === 'status_change') {
+    const char = OfficeCharacters.getByName(msg.agent);
+    if (char) char.setState(msg.state);
+  }
+}
+
 // ── WebSocket ────────────────────────────────────────────────────────────────
 function connectWS() {
   ws = new WebSocket('ws://' + location.host + '/ws');
@@ -282,6 +324,11 @@ function connectWS() {
       if (msg.type === 'refresh') {
         loadTeams();
         if (selectedTeam && (msg.team === selectedTeam || msg.team === '*')) loadTeamData(selectedTeam);
+      }
+      if (msg.type === 'event' && currentView === 'office') {
+        if (selectedTeam && (msg.team === selectedTeam || msg.team === '*')) {
+          handleOfficeEvent(msg);
+        }
       }
     } catch {}
   };
@@ -326,3 +373,24 @@ connectWS();
 loadTeams().then(() => {
   if (teams.length > 0 && !selectedTeam) selectTeam(teams[0].name);
 });
+
+// ── 定期狀態刷新（補充 WebSocket 事件）─────────────────────────────────────────
+setInterval(async () => {
+  if (!selectedTeam || currentView !== 'office') return;
+  try {
+    const res = await fetch('/api/teams/' + selectedTeam + '/status');
+    const statusList = await res.json();
+    for (const s of statusList) {
+      const char = OfficeCharacters.getByName(s.agent);
+      if (char) {
+        char.setState(s.state);
+        char.task = s.task;
+        char.lastMsg = s.lastMsg;
+        // 如果角色剛變成 sleeping 且還沒有 Zzz 特效
+        if (s.state === 'sleeping') {
+          OfficeEffects.spawnZzz(char);
+        }
+      }
+    }
+  } catch {}
+}, 5000);
