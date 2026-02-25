@@ -24,8 +24,8 @@ const TilesetSprites = (() => {
     CHAIR_LEFT:  { sx: 0,  sy: 416, sw: 32, sh: 32, dw: GT, dh: GT, heightTiles: 1 },
     CHAIR_RIGHT: { sx: 64, sy: 416, sw: 32, sh: 32, dw: GT, dh: GT, heightTiles: 1 },
 
-    // ── 電腦螢幕（1×1 game tile）────────────────────────────
-    PC: { sx: 288, sy: 768, sw: 32, sh: 32, dw: GT, dh: GT, heightTiles: 1 },
+    // ── 電腦螢幕 + 鍵盤（1×1 game tile）─────────────────────
+    PC: { sx: 320, sy: 736, sw: 32, sh: 32, dw: GT, dh: GT, heightTiles: 1 },
 
     // ── 書架（1×2 game tiles，直式）────────────────────────
     BOOKSHELF: { sx: 256, sy: 384, sw: 32, sh: 64, dw: GT, dh: GT*2, heightTiles: 2 },
@@ -42,8 +42,13 @@ const TilesetSprites = (() => {
     // ── 時鐘（1×1 game tile）────────────────────────────────
     CLOCK: { sx: 0, sy: 704, sw: 32, sh: 32, dw: GT, dh: GT, heightTiles: 1 },
 
-    // ── 地板 tile（1×1 game tile，可鋪滿）──────────────────
-    FLOOR_TILE: { sx: 0, sy: 960, sw: 32, sh: 32, dw: GT, dh: GT, heightTiles: 1 },
+    // ── 扶手椅（Break Room 專用）— 來自 tileset row 16 (sy=512) ──
+    // 單椅，1×1 game tile（粉色/灰色兩款）
+    SOFA_TAN:  { sx: 0,   sy: 512, sw: 32, sh: 32, dw: GT, dh: GT, heightTiles: 1 },
+    SOFA_BLUE: { sx: 128, sy: 512, sw: 32, sh: 32, dw: GT, dh: GT, heightTiles: 1 },
+
+    // ── 文件櫃（儲藏區）————————————————————————————————
+    FILING_CABINET: { sx: 256, sy: 416, sw: 32, sh: 32, dw: GT, dh: GT, heightTiles: 1 },
   };
 
   return { ...sprites, getImage };

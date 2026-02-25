@@ -51,12 +51,15 @@ function getCachedWallTile() {
 
 // ── 裝飾類型 → Sprite 對應表（優先使用 TilesetSprites）───────────────────────
 const DECORATION_SPRITE_MAP = {
-  whiteboard:     TilesetSprites.WHITEBOARD,
-  window:         FurnitureSprites.WINDOW_SPRITE,  // tileset 無對應，保留 hex
-  clock:          TilesetSprites.CLOCK,
-  bookshelf:      TilesetSprites.BOOKSHELF,
-  plant:          TilesetSprites.PLANT,
-  coffee_machine: TilesetSprites.COFFEE_MACHINE,
+  whiteboard:      FurnitureSprites.WHITEBOARD,      // hex array（簡潔白板）
+  window:          FurnitureSprites.WINDOW_SPRITE,   // hex array（窗戶）
+  clock:           TilesetSprites.CLOCK,
+  bookshelf:       TilesetSprites.BOOKSHELF,
+  plant:           TilesetSprites.PLANT,
+  coffee_machine:  TilesetSprites.COFFEE_MACHINE,
+  sofa_tan:        TilesetSprites.SOFA_TAN,          // break room 沙發
+  sofa_blue:       TilesetSprites.SOFA_BLUE,         // break room 沙發
+  filing_cabinet:  TilesetSprites.FILING_CABINET,    // 文件櫃
 };
 
 // ── 椅子方向 → Sprite 對應表（TilesetSprites）──────────────────────────────
@@ -77,22 +80,10 @@ function createFloorEntity(layout) {
   return {
     zY: 0,
     draw(ctx) {
-      const img = TilesetSprites.getImage();
-      const t = TilesetSprites.FLOOR_TILE;
-      if (img && img.complete && img.naturalWidth) {
-        // PNG tileset 地板（GPU 加速）
-        for (let r = 2; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            ctx.drawImage(img, t.sx, t.sy, t.sw, t.sh, c * TS, r * TS, TS, TS);
-          }
-        }
-      } else {
-        // Fallback: colorized hex array
-        const tile = getCachedFloorTile();
-        for (let r = 2; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            Renderer.drawSprite(ctx, tile, c * TS, r * TS);
-          }
+      const tile = getCachedFloorTile();
+      for (let r = 2; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          Renderer.drawSprite(ctx, tile, c * TS, r * TS);
         }
       }
     },
@@ -150,9 +141,12 @@ function createDeskEntity(desk) {
   const chairPx = desk.chairCol * TS;
   const chairPy = desk.chairRow * TS;
 
-  // zY 使用桌子底部 row 的像素位置，確保前面的家具擋住後面的
-  // 桌子佔 2 tiles 高，所以底部在 row+2
-  const baseZY = (desk.row + 2) * TS;
+  // zY 深度排序：
+  // 上排桌（chairDirection='up'）：角色在桌下方，zY = 桌底（row+2），角色在桌前渲染
+  // 下排桌（chairDirection='down'）：角色在桌上方，zY = 椅子row，讓角色在桌前渲染
+  const baseZY = desk.chairDirection === 'down'
+    ? desk.chairRow * TS       // 下排桌：以椅子位置決定排序
+    : (desk.row + 2) * TS;     // 上排桌：以桌底決定排序
 
   return {
     zY: baseZY,
