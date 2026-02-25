@@ -27,7 +27,7 @@ const Notifications = (() => {
 
     const stateText = stateEmoji(char.state) + ' ' + char.state;
     const taskRow = char.task ? '<div class="agent-card-row">Task: ' + escHtml(char.task) + '</div>' : '';
-    const msgRow = char.lastMsg ? '<div class="agent-card-row">Last msg: ' + char.lastMsg + '</div>' : '';
+    const msgRow = char.lastMsg ? '<div class="agent-card-row">Last msg: ' + escHtml(char.lastMsg) + '</div>' : '';
 
     card.innerHTML =
       '<div class="agent-card-name">\uD83E\uDD16 ' + escHtml(char.persona.label || char.name) + '</div>' +

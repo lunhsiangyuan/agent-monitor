@@ -319,8 +319,8 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   // 靜態檔案（CSS、JS 等）— 使用 Bun.file() 提供
-  const safePath = path.replace(/\.\./g, "");
-  const filePath = join(PUBLIC_DIR, safePath);
+  const filePath = join(PUBLIC_DIR, path);
+  if (!filePath.startsWith(PUBLIC_DIR)) return new Response("Forbidden", { status: 403 });
   if (existsSync(filePath) && statSync(filePath).isFile()) {
     const file = Bun.file(filePath);
     return new Response(file);

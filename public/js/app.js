@@ -386,9 +386,12 @@ setInterval(async () => {
         char.setState(s.state);
         char.task = s.task;
         char.lastMsg = s.lastMsg;
-        // 如果角色剛變成 sleeping 且還沒有 Zzz 特效
-        if (s.state === 'sleeping') {
+        // 如果角色處於 sleeping 且還沒有 Zzz 特效（避免重複生成）
+        if (s.state === 'sleeping' && !char._hasZzz) {
+          char._hasZzz = true;
           OfficeEffects.spawnZzz(char);
+        } else if (s.state !== 'sleeping') {
+          char._hasZzz = false;
         }
       }
     }
