@@ -1,6 +1,6 @@
 // app.js - WebSocket、API、狀態管理、辦公室場景繪製、初始化
 // 依賴 chat.js 中的全域函數（須先載入 chat.js）
-// 依賴 GameLoop, Renderer, FloorSprites, FurnitureSprites, OfficeLayout
+// 依賴 GameLoop, Renderer, TilesetSprites, FloorSprites, FurnitureSprites, OfficeLayout
 
 // ── State ────────────────────────────────────────────────────────────────────
 let selectedTeam = null;
@@ -14,6 +14,24 @@ let currentMembers = [];   // 目前團隊成員列表
 const TILE = Renderer.TILE_SIZE; // 16
 const SC = Renderer.SCALE;       // 3
 const TS = TILE * SC;            // 48 — 一個 tile 的像素尺寸
+
+// ── Tileset 渲染輔助 ─────────────────────────────────────────────────────────
+// 統一介面：自動判斷 tileset ref 或 legacy hex array
+function drawAnySprite(ctx, sprite, x, y) {
+  if (!sprite) return;
+  if (sprite.sx !== undefined) {
+    Renderer.drawTileSprite(ctx, TilesetSprites.getImage(), sprite, x, y);
+  } else {
+    Renderer.drawSprite(ctx, sprite, x, y);
+  }
+}
+
+// 取得 sprite 的高度（game tiles）供 zY 深度排序
+function getSpriteHeightTiles(sprite) {
+  if (!sprite) return 1;
+  if (sprite.heightTiles !== undefined) return sprite.heightTiles;
+  return Math.ceil(sprite.length / TILE); // legacy hex array fallback
+}
 
 // ── Tile 快取（避免每幀重複 colorize）─────────────────────────────────────────
 let _cachedFloorTile = null;
@@ -31,22 +49,25 @@ function getCachedWallTile() {
   return _cachedWallTile;
 }
 
-// ── 裝飾類型 → Sprite 對應表 ────────────────────────────────────────────────
+// ── 裝飾類型 → Sprite 對應表（優先使用 TilesetSprites）───────────────────────
 const DECORATION_SPRITE_MAP = {
-  whiteboard:     FurnitureSprites.WHITEBOARD,
-  window:         FurnitureSprites.WINDOW_SPRITE,
-  clock:          FurnitureSprites.CLOCK,
-  bookshelf:      FurnitureSprites.BOOKSHELF,
-  plant:          FurnitureSprites.PLANT,
-  coffee_machine: FurnitureSprites.COFFEE_MACHINE,
+  whiteboard:      FurnitureSprites.WHITEBOARD,      // hex array（簡潔白板）
+  window:          FurnitureSprites.WINDOW_SPRITE,   // hex array（窗戶）
+  clock:           TilesetSprites.CLOCK,
+  bookshelf:       TilesetSprites.BOOKSHELF,
+  plant:           TilesetSprites.PLANT,
+  coffee_machine:  TilesetSprites.COFFEE_MACHINE,
+  sofa_tan:        TilesetSprites.SOFA_TAN,          // break room 沙發
+  sofa_blue:       TilesetSprites.SOFA_BLUE,         // break room 沙發
+  filing_cabinet:  TilesetSprites.FILING_CABINET,    // 文件櫃
 };
 
-// ── 椅子方向 → Sprite 對應表 ────────────────────────────────────────────────
+// ── 椅子方向 → Sprite 對應表（TilesetSprites）──────────────────────────────
 const CHAIR_SPRITE_MAP = {
-  up:    FurnitureSprites.CHAIR_UP,
-  down:  FurnitureSprites.CHAIR_DOWN,
-  left:  FurnitureSprites.CHAIR_LEFT,
-  right: FurnitureSprites.CHAIR_RIGHT,
+  up:    TilesetSprites.CHAIR_UP,
+  down:  TilesetSprites.CHAIR_DOWN,
+  left:  TilesetSprites.CHAIR_LEFT,
+  right: TilesetSprites.CHAIR_RIGHT,
 };
 
 // ── 場景 Entity 工廠函數 ────────────────────────────────────────────────────
@@ -60,7 +81,6 @@ function createFloorEntity(layout) {
     zY: 0,
     draw(ctx) {
       const tile = getCachedFloorTile();
-      // 地板覆蓋牆壁以下的所有行（row 2 到 rows-1）
       for (let r = 2; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           Renderer.drawSprite(ctx, tile, c * TS, r * TS);
@@ -100,7 +120,7 @@ function createWallDecorationEntity(decoration) {
   return {
     zY: decoration.row * TS + 1, // 牆面裝飾 zY 略高於牆壁本身
     draw(ctx) {
-      Renderer.drawSprite(ctx, sprite, px, py);
+      drawAnySprite(ctx, sprite, px, py);
     },
   };
 }
@@ -110,9 +130,9 @@ function createWallDecorationEntity(decoration) {
  * zY 基於桌子的 row 位置（底部），確保深度排序正確
  */
 function createDeskEntity(desk) {
-  const deskSprite = FurnitureSprites.DESK;
-  const pcSprite = FurnitureSprites.PC;
-  const chairSprite = CHAIR_SPRITE_MAP[desk.chairDirection] || FurnitureSprites.CHAIR_DOWN;
+  const deskSprite = TilesetSprites.DESK;
+  const pcSprite = TilesetSprites.PC;
+  const chairSprite = CHAIR_SPRITE_MAP[desk.chairDirection] || TilesetSprites.CHAIR_DOWN;
 
   const deskPx = desk.col * TS;
   const deskPy = desk.row * TS;
@@ -121,19 +141,19 @@ function createDeskEntity(desk) {
   const chairPx = desk.chairCol * TS;
   const chairPy = desk.chairRow * TS;
 
-  // zY 使用桌子底部 row 的像素位置，確保前面的家具擋住後面的
-  // 桌子佔 2 tiles 高，所以底部在 row+2
-  const baseZY = (desk.row + 2) * TS;
+  // zY 深度排序：
+  // 上排桌（chairDirection='up'）：角色在桌下方，zY = 桌底（row+2），角色在桌前渲染
+  // 下排桌（chairDirection='down'）：角色在桌上方，zY = 椅子row，讓角色在桌前渲染
+  const baseZY = desk.chairDirection === 'down'
+    ? desk.chairRow * TS       // 下排桌：以椅子位置決定排序
+    : (desk.row + 2) * TS;     // 上排桌：以桌底決定排序
 
   return {
     zY: baseZY,
     draw(ctx) {
-      // 繪製桌子（32x32 sprite）
-      Renderer.drawSprite(ctx, deskSprite, deskPx, deskPy);
-      // 繪製 PC（在桌面上）
-      Renderer.drawSprite(ctx, pcSprite, pcPx, pcPy);
-      // 繪製椅子
-      Renderer.drawSprite(ctx, chairSprite, chairPx, chairPy);
+      drawAnySprite(ctx, deskSprite,  deskPx,  deskPy);
+      drawAnySprite(ctx, pcSprite,    pcPx,    pcPy);
+      drawAnySprite(ctx, chairSprite, chairPx, chairPy);
     },
   };
 }
@@ -149,13 +169,12 @@ function createFloorDecorationEntity(decoration) {
   const py = decoration.row * TS;
 
   // sprite 高度（以 tile 數計算）用於 zY
-  const spriteHeightTiles = Math.ceil(sprite.length / TILE);
-  const bottomRow = decoration.row + spriteHeightTiles;
+  const bottomRow = decoration.row + getSpriteHeightTiles(sprite);
 
   return {
     zY: bottomRow * TS,
     draw(ctx) {
-      Renderer.drawSprite(ctx, sprite, px, py);
+      drawAnySprite(ctx, sprite, px, py);
     },
   };
 }

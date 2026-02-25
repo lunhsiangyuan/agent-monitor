@@ -11,7 +11,7 @@ import { join } from "path";
 
 const TEAMS_DIR = join(process.env.HOME!, ".claude/teams");
 const TASKS_DIR = join(process.env.HOME!, ".claude/tasks");
-const PORT = 3333;
+const PORT = parseInt(process.env.PORT || '3333');
 
 // ─── 型別定義 ──────────────────────────────────────────────────────────────
 

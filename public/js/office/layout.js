@@ -106,7 +106,7 @@ const OfficeLayout = (() => {
         desks.push({
           col, row: bottomDeskRow,
           chairCol: col, chairRow: bottomDeskRow - 1,
-          pcCol: col + 1, pcRow: bottomDeskRow + 1,
+          pcCol: col + 1, pcRow: bottomDeskRow,  // PC 在桌面頂部（與上排一致）
           chairDirection: 'down',
         });
       }
@@ -142,35 +142,42 @@ const OfficeLayout = (() => {
   }
 
   /**
-   * 放置地面裝飾（書架、盆栽）
-   * 書架靠牆放置，盆栽散佈在角落
+   * 放置地面裝飾 — 含三個部門區：工作區、Break Room、儲藏區
    */
   function placeFloorDecorations(cols, rows, grid) {
     const decorations = [];
 
-    // 書架放在左上角（col 1 靠牆內側，row 2-3）
-    const bsCol = 1;
-    const bsRow = WALL_ROWS;
-    decorations.push({ type: 'bookshelf', col: bsCol, row: bsRow });
-    blockArea(grid, bsCol, bsRow, BOOKSHELF_W, BOOKSHELF_H);
+    // ── 儲藏區（左側牆邊：書架 + 文件櫃）────────────────────
+    decorations.push({ type: 'bookshelf', col: 1, row: WALL_ROWS });
+    blockArea(grid, 1, WALL_ROWS, BOOKSHELF_W, BOOKSHELF_H);
 
-    // 盆栽放在右上角（牆內側）
+    decorations.push({ type: 'filing_cabinet', col: 1, row: WALL_ROWS + 2 });
+    blockArea(grid, 1, WALL_ROWS + 2, 1, 1);
+
+    // ── 工作區 — 右上角盆栽（讓工作區有點綠意）──────────────
     const plantTopCol = cols - 2;
-    const plantTopRow = WALL_ROWS;
-    decorations.push({ type: 'plant', col: plantTopCol, row: plantTopRow });
-    blockArea(grid, plantTopCol, plantTopRow, 1, 2);
+    decorations.push({ type: 'plant', col: plantTopCol, row: WALL_ROWS });
+    blockArea(grid, plantTopCol, WALL_ROWS, 1, 1);
 
-    // 盆栽放在左下角（牆內側）
-    const plantBLCol = 1;
-    const plantBLRow = rows - 3;
-    decorations.push({ type: 'plant', col: plantBLCol, row: plantBLRow });
-    blockArea(grid, plantBLCol, plantBLRow, 1, 2);
+    // ── Break Room（底部：扶手椅圍繞咖啡機）─────────────────
+    // 左側兩張粉色扶手椅
+    const sofaRow = rows - 4;
+    if (sofaRow > WALL_ROWS + 4 && cols >= 10) {
+      decorations.push({ type: 'sofa_tan', col: 1, row: sofaRow });
+      blockArea(grid, 1, sofaRow, 1, 1);
+      decorations.push({ type: 'sofa_tan', col: 2, row: sofaRow });
+      blockArea(grid, 2, sofaRow, 1, 1);
 
-    // 盆栽放在右下角（牆內側）
-    const plantBRCol = cols - 2;
-    const plantBRRow = rows - 3;
-    decorations.push({ type: 'plant', col: plantBRCol, row: plantBRRow });
-    blockArea(grid, plantBRCol, plantBRRow, 1, 2);
+      // 右側兩張灰色扶手椅
+      decorations.push({ type: 'sofa_blue', col: cols - 3, row: sofaRow });
+      blockArea(grid, cols - 3, sofaRow, 1, 1);
+      decorations.push({ type: 'sofa_blue', col: cols - 2, row: sofaRow });
+      blockArea(grid, cols - 2, sofaRow, 1, 1);
+    }
+
+    // 右下角盆栽（break room 裝飾）
+    decorations.push({ type: 'plant', col: cols - 2, row: rows - 3 });
+    blockArea(grid, cols - 2, rows - 3, 1, 1);
 
     return decorations;
   }
