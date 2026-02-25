@@ -126,10 +126,19 @@ const Renderer = (() => {
     ctx.strokeRect(x, y, s, s);
   }
 
+  // Draw a sprite from a PNG tileset using drawImage (GPU-accelerated)
+  // tileDef: { sx, sy, sw, sh, dw, dh } from TilesetSprites
+  function drawTileSprite(ctx, img, tileDef, x, y) {
+    if (!img || !img.complete || !img.naturalWidth) return;
+    const { sx, sy, sw, sh, dw, dh } = tileDef;
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, dw, dh);
+  }
+
   return {
     TILE_SIZE, SCALE,
     drawSprite, flipHorizontal, recolor,
     hueShift, colorize, drawTileOutline,
-    hexToRgb, rgbToHex, rgbToHsl, hslToRgb
+    hexToRgb, rgbToHex, rgbToHsl, hslToRgb,
+    drawTileSprite,
   };
 })();
