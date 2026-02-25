@@ -209,7 +209,10 @@ function initOffice(members) {
     GameLoop.addEntity(createDeskEntity(desk));
   }
 
-  // ── 5. 啟動 GameLoop ──
+  // ── 5. 角色 ──
+  OfficeCharacters.init(members, null, layout);
+
+  // ── 6. 啟動 GameLoop ──
   if (!GameLoop.isRunning()) {
     GameLoop.init('officeCanvas');
   } else {
