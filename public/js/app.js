@@ -212,7 +212,10 @@ function initOffice(members) {
   // ── 5. 角色 ──
   OfficeCharacters.init(members, null, layout);
 
-  // ── 6. 啟動 GameLoop ──
+  // ── 6. 視覺特效 ──
+  OfficeEffects.register();
+
+  // ── 7. 啟動 GameLoop ──
   if (!GameLoop.isRunning()) {
     GameLoop.init('officeCanvas');
   } else {
