@@ -117,7 +117,7 @@ async function readTeamMessages(teamName: string): Promise<InboxMessage[]> {
   const inboxDir = join(TEAMS_DIR, teamName, "inboxes");
   if (!existsSync(inboxDir)) return [];
 
-  let allMessages: InboxMessage[] = [];
+  const allMessages: InboxMessage[] = [];
 
   try {
     const files = await readdir(inboxDir);
@@ -278,36 +278,20 @@ async function handleRequest(req: Request): Promise<Response> {
     return Response.json(teams);
   }
 
-  // Team config（含路徑驗證）
-  const configMatch = path.match(/^\/api\/teams\/([^/]+)$/);
-  if (configMatch) {
-    if (!isValidTeamName(configMatch[1])) return new Response("Invalid team name", { status: 400 });
-    const config = await readTeamConfig(configMatch[1]);
-    return Response.json(config);
-  }
+  // Team 相關 API（統一路徑驗證）
+  const teamMatch = path.match(/^\/api\/teams\/([^/]+)(\/[a-z]*)?$/);
+  if (teamMatch) {
+    const teamName = teamMatch[1];
+    const sub = teamMatch[2] || '';
+    if (!isValidTeamName(teamName)) return new Response("Invalid team name", { status: 400 });
 
-  // Team messages（含路徑驗證）
-  const msgMatch = path.match(/^\/api\/teams\/([^/]+)\/messages$/);
-  if (msgMatch) {
-    if (!isValidTeamName(msgMatch[1])) return new Response("Invalid team name", { status: 400 });
-    const messages = await readTeamMessages(msgMatch[1]);
-    return Response.json(messages);
-  }
-
-  // Team tasks（含路徑驗證）
-  const taskMatch = path.match(/^\/api\/teams\/([^/]+)\/tasks$/);
-  if (taskMatch) {
-    if (!isValidTeamName(taskMatch[1])) return new Response("Invalid team name", { status: 400 });
-    const tasks = await readTeamTasks(taskMatch[1]);
-    return Response.json(tasks);
-  }
-
-  // Agent 狀態推斷
-  const statusMatch = path.match(/^\/api\/teams\/([^/]+)\/status$/);
-  if (statusMatch) {
-    if (!isValidTeamName(statusMatch[1])) return new Response("Invalid team name", { status: 400 });
-    const status = await inferAgentStatus(statusMatch[1]);
-    return Response.json(status);
+    switch (sub) {
+      case '':          return Response.json(await readTeamConfig(teamName));
+      case '/messages':  return Response.json(await readTeamMessages(teamName));
+      case '/tasks':     return Response.json(await readTeamTasks(teamName));
+      case '/status':    return Response.json(await inferAgentStatus(teamName));
+      default:           return new Response("Not Found", { status: 404 });
+    }
   }
 
   // Dashboard HTML
@@ -438,9 +422,5 @@ startFileWatcher();
 
 // macOS 自動開啟瀏覽器
 if (process.platform === "darwin") {
-  const { spawn } = await import("child_process");
-  // 稍等一下確保 server 已啟動
-  setTimeout(() => {
-    spawn("open", [`http://localhost:${PORT}`], { detached: true });
-  }, 500);
+  setTimeout(() => Bun.spawn(["open", `http://localhost:${PORT}`]), 500);
 }

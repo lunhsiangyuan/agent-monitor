@@ -59,5 +59,5 @@ const Notifications = (() => {
     return map[state] || '\u2753';
   }
 
-  return { showToast, showAgentCard, escHtml };
+  return { showToast, showAgentCard };
 })();

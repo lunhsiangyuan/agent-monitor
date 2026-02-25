@@ -161,18 +161,14 @@ const OfficeEffects = (() => {
   const effectsEntity = {
     zY: 99999,
     update(delta) {
-      for (const e of effects) {
-        if (e.update) e.update(delta);
-      }
-      // 反向移除已完成的特效
+      for (const e of effects) e.update(delta);
+      // 移除已完成的特效
       for (let i = effects.length - 1; i >= 0; i--) {
         if (effects[i].done) effects.splice(i, 1);
       }
     },
     draw(ctx) {
-      for (const e of effects) {
-        if (e.draw) e.draw(ctx);
-      }
+      for (const e of effects) e.draw(ctx);
     },
   };
 

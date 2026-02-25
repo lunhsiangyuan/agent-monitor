@@ -79,6 +79,24 @@ const OfficeCharacters = (() => {
 
   const TS = Renderer.TILE_SIZE * Renderer.SCALE; // 48px 每 tile
 
+  // 狀態名稱 → OfficeCharacters.STATES 對應（server → client）
+  const SERVER_STATE_MAP = {
+    'typing':   STATES.WORKING,
+    'reading':  STATES.READING,
+    'sleeping': STATES.SLEEPING,
+    'gone':     STATES.GONE,
+    'coffee':   STATES.COFFEE,
+    'idle':     STATES.IDLE,
+  };
+
+  // 根據目標 tile 計算朝向
+  function directionTo(fromCol, fromRow, toCol, toRow) {
+    if (toCol > fromCol) return 'right';
+    if (toCol < fromCol) return 'left';
+    if (toRow > fromRow) return 'down';
+    return 'up';
+  }
+
   // 建立單一角色 Entity
   function createCharacter(member, index, layout) {
     const desk = layout.desks[index];
@@ -108,7 +126,6 @@ const OfficeCharacters = (() => {
       path: [],
       moveProgress: 0,
       // 閒置行為計時器
-      idleTimer: 0,
       wanderTimer: Math.random() * 30000,
       // 內部狀態追蹤
       _previousState: null,
@@ -162,20 +179,15 @@ const OfficeCharacters = (() => {
           // 根據下一個路點更新朝向
           if (this.path.length > 0) {
             const n = this.path[0];
-            if (n.col > this.tileCol) this.direction = 'right';
-            else if (n.col < this.tileCol) this.direction = 'left';
-            else if (n.row > this.tileRow) this.direction = 'down';
-            else this.direction = 'up';
+            this.direction = directionTo(this.tileCol, this.tileRow, n.col, n.row);
           }
         } else if (this.path.length > 0) {
           // 在 tile 之間插值位置
           const next = this.path[0];
           const fromX = this.tileCol * TS;
           const fromY = this.tileRow * TS;
-          const toX = next.col * TS;
-          const toY = next.row * TS;
-          this.x = fromX + (toX - fromX) * this.moveProgress;
-          this.y = fromY + (toY - fromY) * this.moveProgress;
+          this.x = fromX + (next.col * TS - fromX) * this.moveProgress;
+          this.y = fromY + (next.row * TS - fromY) * this.moveProgress;
         }
       },
 
@@ -200,12 +212,7 @@ const OfficeCharacters = (() => {
           this._targetState = targetState || STATES.IDLE;
           this.moveProgress = 0;
           this.frame = 0;
-          // 設定初始朝向
-          const first = path[0];
-          if (first.col > this.tileCol) this.direction = 'right';
-          else if (first.col < this.tileCol) this.direction = 'left';
-          else if (first.row > this.tileRow) this.direction = 'down';
-          else this.direction = 'up';
+          this.direction = directionTo(this.tileCol, this.tileRow, path[0].col, path[0].row);
         }
       },
 
@@ -236,15 +243,7 @@ const OfficeCharacters = (() => {
       },
 
       setState(serverState) {
-        const map = {
-          'typing':   STATES.WORKING,
-          'reading':  STATES.READING,
-          'sleeping': STATES.SLEEPING,
-          'gone':     STATES.GONE,
-          'coffee':   STATES.COFFEE,
-          'idle':     STATES.IDLE,
-        };
-        const newState = map[serverState] || STATES.IDLE;
+        const newState = SERVER_STATE_MAP[serverState] || STATES.IDLE;
         if (this.state !== newState && this.state !== STATES.WALKING) {
           // 不中斷行走狀態
           this.state = newState;
@@ -307,9 +306,5 @@ const OfficeCharacters = (() => {
     return characters.find(c => c.name.toLowerCase() === name.toLowerCase());
   }
 
-  function getAll() {
-    return characters;
-  }
-
-  return { init, getByName, getAll, characters, STATES };
+  return { init, getByName, characters, STATES };
 })();

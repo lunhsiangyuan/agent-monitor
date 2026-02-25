@@ -8,7 +8,6 @@ let ws = null;
 let teams = [];
 let archiveOpen = false;
 let currentView = 'chat'; // 預設顯示 chat，直到 office 建置完成
-let currentLayout = null;  // 目前辦公室佈局
 let currentMembers = [];   // 目前團隊成員列表
 
 // ── 場景繪製常量 ─────────────────────────────────────────────────────────────
@@ -204,7 +203,6 @@ function initOffice(members) {
 
   // 生成辦公室佈局
   const layout = OfficeLayout.generate(memberCount);
-  currentLayout = layout;
 
   // ── 1. 地板（最底層）──
   GameLoop.addEntity(createFloorEntity(layout));
@@ -216,15 +214,9 @@ function initOffice(members) {
   const wallTypes = new Set(['whiteboard', 'window', 'clock']);
 
   for (const deco of layout.decorations) {
-    if (wallTypes.has(deco.type)) {
-      // 牆面裝飾
-      const entity = createWallDecorationEntity(deco);
-      if (entity) GameLoop.addEntity(entity);
-    } else {
-      // 地面裝飾（書架、盆栽、咖啡機）
-      const entity = createFloorDecorationEntity(deco);
-      if (entity) GameLoop.addEntity(entity);
-    }
+    const factory = wallTypes.has(deco.type) ? createWallDecorationEntity : createFloorDecorationEntity;
+    const entity = factory(deco);
+    if (entity) GameLoop.addEntity(entity);
   }
 
   // ── 4. 桌椅 + PC ──
@@ -273,43 +265,43 @@ function switchView(view) {
 
 // ── Office 事件處理 ──────────────────────────────────────────────────────────
 function handleOfficeEvent(msg) {
-  if (msg.event === 'message') {
-    const from = OfficeCharacters.getByName(msg.from);
-    const to = OfficeCharacters.getByName(msg.to);
-    if (from && to) {
-      OfficeEffects.sendEnvelope(from, to);
+  switch (msg.event) {
+    case 'message': {
+      const from = OfficeCharacters.getByName(msg.from);
+      const to = OfficeCharacters.getByName(msg.to);
+      if (from && to) OfficeEffects.sendEnvelope(from, to);
+      Notifications.showToast(msg.from + ' → ' + msg.to + ': ' + msg.summary, '✉️');
+      break;
     }
-    Notifications.showToast(msg.from + ' → ' + msg.to + ': ' + msg.summary, '✉️');
-  }
-
-  if (msg.event === 'task_completed') {
-    const char = OfficeCharacters.getByName(msg.agent);
-    if (char) {
-      char._previousState = char.state;
-      char.state = OfficeCharacters.STATES.CELEBRATE;
-      char.frame = 0;
-      OfficeEffects.spawnCelebration(char);
+    case 'task_completed': {
+      const char = OfficeCharacters.getByName(msg.agent);
+      if (char) {
+        char._previousState = char.state;
+        char.state = OfficeCharacters.STATES.CELEBRATE;
+        char.frame = 0;
+        OfficeEffects.spawnCelebration(char);
+      }
+      Notifications.showToast(msg.agent + ' 完成：' + msg.task, '✅');
+      break;
     }
-    Notifications.showToast(msg.agent + ' 完成：' + msg.task, '✅');
-  }
-
-  if (msg.event === 'task_assigned') {
-    const char = OfficeCharacters.getByName(msg.agent);
-    if (char) {
-      char.task = msg.task;
-      char.setState('typing');
+    case 'task_assigned': {
+      const char = OfficeCharacters.getByName(msg.agent);
+      if (char) {
+        char.task = msg.task;
+        char.setState('typing');
+      }
+      Notifications.showToast(msg.task + ' → ' + msg.agent, '📋');
+      break;
     }
-    Notifications.showToast(msg.task + ' → ' + msg.agent, '📋');
-  }
-
-  if (msg.event === 'shutdown') {
-    OfficeEffects.flashRed();
-    Notifications.showToast('Team Lead 正在收工', '📢');
-  }
-
-  if (msg.event === 'status_change') {
-    const char = OfficeCharacters.getByName(msg.agent);
-    if (char) char.setState(msg.state);
+    case 'shutdown':
+      OfficeEffects.flashRed();
+      Notifications.showToast('Team Lead 正在收工', '📢');
+      break;
+    case 'status_change': {
+      const char = OfficeCharacters.getByName(msg.agent);
+      if (char) char.setState(msg.state);
+      break;
+    }
   }
 }
 
@@ -321,14 +313,12 @@ function connectWS() {
   ws.onmessage = e => {
     try {
       const msg = JSON.parse(e.data);
+      const isRelevant = selectedTeam && (msg.team === selectedTeam || msg.team === '*');
       if (msg.type === 'refresh') {
         loadTeams();
-        if (selectedTeam && (msg.team === selectedTeam || msg.team === '*')) loadTeamData(selectedTeam);
-      }
-      if (msg.type === 'event' && currentView === 'office') {
-        if (selectedTeam && (msg.team === selectedTeam || msg.team === '*')) {
-          handleOfficeEvent(msg);
-        }
+        if (isRelevant) loadTeamData(selectedTeam);
+      } else if (msg.type === 'event' && currentView === 'office' && isRelevant) {
+        handleOfficeEvent(msg);
       }
     } catch {}
   };
