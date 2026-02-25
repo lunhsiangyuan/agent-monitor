@@ -36,6 +36,13 @@ interface Task {
   activeForm?: string;
 }
 
+interface AgentStatus {
+  agent: string;
+  state: 'typing' | 'reading' | 'sleeping' | 'gone' | 'coffee' | 'idle';
+  task?: string;
+  lastMsg?: string;
+}
+
 interface TeamInfo {
   name: string;
   description?: string;
@@ -168,6 +175,62 @@ async function readTeamTasks(teamName: string): Promise<Task[]> {
   return tasks;
 }
 
+// ─── Agent 狀態推斷 ─────────────────────────────────────────────────────────
+
+function formatAge(ms: number): string {
+  if (ms < 60000) return '<1min';
+  if (ms < 3600000) return Math.floor(ms / 60000) + 'min';
+  return Math.floor(ms / 3600000) + 'h';
+}
+
+async function inferAgentStatus(teamName: string): Promise<AgentStatus[]> {
+  const config = await readTeamConfig(teamName);
+  const tasks = await readTeamTasks(teamName);
+  const messages = await readTeamMessages(teamName);
+  const now = Date.now();
+
+  return config.members.map(member => {
+    const name = member.name;
+    const agentTasks = tasks.filter(t => t.owner === name);
+    const agentMsgs = messages.filter(m => m.from === name);
+    const lastMsg = agentMsgs[agentMsgs.length - 1];
+    const lastMsgAge = lastMsg ? now - new Date(lastMsg.timestamp).getTime() : Infinity;
+
+    // 優先順序狀態推斷：
+    // 1. 檢查 shutdown / idle_notification
+    if (lastMsg) {
+      try {
+        const obj = JSON.parse(lastMsg.text);
+        if (obj.type === 'shutdown_response' && obj.approve !== false) {
+          return { agent: name, state: 'gone' as const };
+        }
+        if (obj.type === 'idle_notification') {
+          return { agent: name, state: 'sleeping' as const, lastMsg: formatAge(lastMsgAge) };
+        }
+      } catch {}
+    }
+
+    // 2. 有 in_progress 任務
+    const inProgress = agentTasks.find(t => t.status === 'in_progress');
+    if (inProgress) {
+      if (lastMsgAge < 120000) { // 最近訊息 < 2 分鐘 → 正在輸出
+        return { agent: name, state: 'typing' as const, task: inProgress.subject, lastMsg: formatAge(lastMsgAge) };
+      }
+      // 有任務但安靜 → 閱讀/思考中
+      return { agent: name, state: 'reading' as const, task: inProgress.subject, lastMsg: formatAge(lastMsgAge) };
+    }
+
+    // 3. 有被阻塞的任務 → 等待中（coffee break）
+    const blocked = agentTasks.find(t => t.status === 'pending' && t.blockedBy?.length > 0);
+    if (blocked) {
+      return { agent: name, state: 'coffee' as const, task: blocked.subject };
+    }
+
+    // 4. 預設 idle
+    return { agent: name, state: 'idle' as const, lastMsg: lastMsg ? formatAge(lastMsgAge) : undefined };
+  });
+}
+
 // ─── 靜態檔案目錄 ──────────────────────────────────────────────────────────
 const PUBLIC_DIR = join(import.meta.dir, "public");
 
@@ -239,6 +302,14 @@ async function handleRequest(req: Request): Promise<Response> {
     return Response.json(tasks);
   }
 
+  // Agent 狀態推斷
+  const statusMatch = path.match(/^\/api\/teams\/([^/]+)\/status$/);
+  if (statusMatch) {
+    if (!isValidTeamName(statusMatch[1])) return new Response("Invalid team name", { status: 400 });
+    const status = await inferAgentStatus(statusMatch[1]);
+    return Response.json(status);
+  }
+
   // Dashboard HTML
   if (path === "/" || path === "/index.html") {
     const html = await readFile(join(PUBLIC_DIR, "index.html"), "utf-8");
@@ -283,8 +354,25 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleRefresh(teamName: string) {
   pendingTeams.add(teamName);
   if (debounceTimer) clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
+  debounceTimer = setTimeout(async () => {
     for (const t of pendingTeams) {
+      // 嘗試從最新訊息提取事件細節
+      try {
+        const messages = await readTeamMessages(t);
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg) {
+          broadcast({
+            type: 'event',
+            team: t,
+            event: 'message',
+            from: lastMsg.from,
+            to: lastMsg.to,
+            summary: lastMsg.summary || lastMsg.text.slice(0, 50),
+            timestamp: lastMsg.timestamp,
+          });
+        }
+      } catch {}
+      // 永遠發送 refresh 以同步資料
       broadcast({ type: "refresh", team: t });
     }
     pendingTeams.clear();
