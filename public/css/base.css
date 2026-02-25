@@ -1,0 +1,131 @@
+/* base.css - Agent Teams Monitor 基礎樣式 */
+
+:root {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface2: #141414;
+  --sidebar-bg: #0a0a0a;
+  --sidebar-text: #e8e8e8;
+  --sidebar-muted: #8b95a3;
+  --sidebar-active: #1a1a1a;
+  --border: #1e1e1e;
+  --text: #f0f0f0;
+  --text-muted: #b0b8c4;
+  --accent: #38bdf8;
+  --green: #34d399;
+  --orange: #fbbf24;
+  --red: #f87171;
+  --purple: #a78bfa;
+  --bubble-out: #0e4a7a;
+  --bubble-out-text: #e0f2fe;
+  --bubble-in: #1a1a1a;
+  --bubble-in-text: #f0f0f0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Fira Sans', -apple-system, sans-serif; font-size: 14px; height: 100vh; display: flex; flex-direction: column; color-scheme: dark; }
+
+/* Header */
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+header h1 { font-size: 16px; font-weight: 600; color: #fff; letter-spacing: -0.3px; }
+.ws-dot { width: 8px; height: 8px; border-radius: 50%; background: #333; transition: all 0.3s; }
+.ws-dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.header-time { margin-left: auto; font-size: 12px; color: var(--text-muted); font-family: 'Fira Code', monospace; }
+
+/* Layout */
+.layout { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+.sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; }
+.sidebar-section { padding: 16px 16px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--sidebar-muted); font-weight: 600; }
+.team-card { padding: 12px 16px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.15s; }
+.team-card:hover { background: var(--surface2); }
+.team-card.active { background: var(--sidebar-active); border-left-color: var(--accent); }
+.team-card-name { font-weight: 700; font-size: 14px; color: #fff; }
+.team-card-desc { font-size: 12px; color: var(--sidebar-muted); margin-top: 4px; }
+.team-card-stats { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.pill { font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: 700; letter-spacing: 0.02em; }
+.pill-blue { background: rgba(56,189,248,0.15); color: var(--accent); }
+.pill-green { background: rgba(52,211,153,0.15); color: var(--green); }
+.pill-orange { background: rgba(251,191,36,0.15); color: var(--orange); }
+
+/* Agent member list (dropdown) */
+.team-card-toggle { font-size: 10px; color: var(--sidebar-muted); float: right; transition: transform 0.2s; }
+.team-card-toggle.open { transform: rotate(180deg); }
+.member-list { max-height: 0; overflow: hidden; transition: max-height 0.25s ease; }
+.member-list.open { max-height: 300px; }
+.member-item { display: flex; align-items: center; gap: 8px; padding: 6px 16px 6px 28px; font-size: 12px; }
+.member-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; color: #fff; font-weight: 600; overflow: hidden; }
+.member-dot img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.member-name { color: var(--sidebar-text); font-weight: 500; }
+
+/* Chat area */
+.chat-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+.chat-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.chat-header-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.chat-header-info { flex: 1; }
+.chat-header-name { font-weight: 700; font-size: 15px; color: #fff; }
+.chat-header-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 4px; }
+.empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); gap: 8px; }
+.empty-state span { font-size: 40px; }
+
+/* Date divider */
+.date-divider { text-align: center; margin: 16px 0 10px; }
+.date-divider span { background: var(--surface2); border: 1px solid var(--border); padding: 4px 14px; border-radius: 12px; font-size: 11px; color: var(--text-muted); font-weight: 500; }
+
+/* Message groups & bubbles */
+.msg-group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+.msg-group.outgoing { align-items: flex-end; }
+.msg-group.incoming { align-items: flex-start; }
+.msg-group.system-event { align-items: center; }
+
+.msg-sender-label { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; padding: 0 4px; font-weight: 500; }
+.msg-group.outgoing .msg-sender-label { text-align: right; }
+
+.bubble-row { display: flex; align-items: flex-end; gap: 8px; max-width: 72%; }
+.msg-group.outgoing .bubble-row { flex-direction: row-reverse; }
+
+.avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; font-weight: 700; color: #fff; overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.chat-header-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+.bubble { padding: 10px 14px; border-radius: 16px; line-height: 1.6; font-size: 14px; position: relative; word-break: break-word; }
+.bubble.out { background: var(--bubble-out); color: var(--bubble-out-text); border-bottom-right-radius: 4px; }
+.bubble.in { background: var(--bubble-in); color: var(--bubble-in-text); border-bottom-left-radius: 4px; border: 1px solid var(--border); }
+.bubble-time { font-size: 10px; color: var(--text-muted); margin-top: 4px; font-family: 'Fira Code', monospace; }
+.bubble.out .bubble-time { text-align: right; }
+.bubble-summary { font-weight: 700; margin-bottom: 5px; font-size: 13px; color: var(--accent); }
+.bubble.out .bubble-summary { color: #7dd3fc; }
+.bubble-body { font-size: 13px; max-height: 100px; overflow: hidden; transition: max-height 0.3s; white-space: pre-wrap; line-height: 1.7; }
+.bubble-body.expanded { max-height: 800px; }
+.bubble-more { font-size: 11px; cursor: pointer; margin-top: 6px; color: var(--accent); font-weight: 600; }
+.bubble-more:hover { text-decoration: underline; }
+
+/* System event pill */
+.event-pill { background: var(--surface2); border: 1px solid var(--border); padding: 6px 16px; border-radius: 20px; font-size: 12px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+
+/* Tasks panel */
+.tasks-panel { background: var(--surface); border-top: 1px solid var(--border); padding: 14px 20px; flex-shrink: 0; }
+.tasks-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+.task-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.task-item { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); cursor: default; transition: border-color 0.2s; }
+.task-item:hover { border-color: var(--accent); }
+.task-item.done { opacity: 0.5; }
+.task-name { font-weight: 600; }
+
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.bubble { animation: fadein 0.2s ease; }
+
+/* Archive section */
+.archive-header { padding: 10px 16px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--sidebar-muted); font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; border-top: 1px solid var(--border); margin-top: 4px; }
+.archive-header:hover { color: var(--text-muted); }
+.archive-chevron { font-size: 9px; transition: transform 0.2s; }
+.archive-chevron.open { transform: rotate(90deg); }
+.archive-count { background: var(--surface2); border: 1px solid var(--border); padding: 1px 7px; border-radius: 8px; font-size: 10px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }

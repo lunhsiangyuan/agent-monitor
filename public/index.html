@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🤖 Agent Teams</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/ui-overlay.css">
+</head>
+<body>
+<header>
+  <div class="ws-dot" id="wsDot"></div>
+  <h1>🤖 Agent Teams</h1>
+  <div class="view-tabs">
+    <button class="view-tab" data-view="office" onclick="switchView('office')">🏢 Office</button>
+    <button class="view-tab active" data-view="chat" onclick="switchView('chat')">💬 Chat</button>
+  </div>
+  <span class="header-time" id="headerTime">—</span>
+</header>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div id="teamList"><div style="padding:20px;color:#666;font-size:13px">Loading…</div></div>
+  </nav>
+
+  <div class="main-content">
+    <div id="officeView" class="office-view" style="display:none">
+      <canvas id="officeCanvas"></canvas>
+      <div id="officeOverlay" class="office-overlay"></div>
+    </div>
+
+    <div id="chatView" class="chat-wrap">
+      <div class="chat-header" id="chatHeader" style="display:none">
+        <div class="chat-header-avatar" id="chatAvatar">🤖</div>
+        <div class="chat-header-info">
+          <div class="chat-header-name" id="chatName">—</div>
+          <div class="chat-header-sub" id="chatSub">—</div>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="empty-state"><span>💬</span>Select a team to see the conversation</div>
+      </div>
+
+      <div class="tasks-panel" id="tasksPanel" style="display:none">
+        <div class="tasks-title">
+          <span>📋 Tasks</span>
+          <span id="taskSummary" style="font-weight:400;text-transform:none;letter-spacing:0"></span>
+        </div>
+        <div class="task-pills" id="taskPills"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+
+<script src="/js/chat.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
