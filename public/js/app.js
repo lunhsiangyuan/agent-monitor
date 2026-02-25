@@ -161,6 +161,29 @@ function createFloorDecorationEntity(decoration) {
   };
 }
 
+// ── Canvas 點擊偵測（角色 Info Card）──────────────────────────────────────────
+function setupCanvasClickHandler() {
+  const canvas = document.getElementById('officeCanvas');
+  if (canvas._clickHandlerSet) return; // 防止重複綁定
+  canvas._clickHandlerSet = true;
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    // 檢查是否點擊到角色
+    for (const char of OfficeCharacters.characters) {
+      const cw = 16 * Renderer.SCALE;
+      const ch = 24 * Renderer.SCALE;
+      if (x >= char.x && x <= char.x + cw && y >= char.y && y <= char.y + ch) {
+        Notifications.showAgentCard(char, e.clientX, e.clientY);
+        return;
+      }
+    }
+    // 點擊空白處關閉所有 card
+    document.querySelectorAll('.agent-card').forEach(c => c.remove());
+  });
+}
+
 // ── 辦公室初始化 ─────────────────────────────────────────────────────────────
 
 /**
@@ -215,7 +238,10 @@ function initOffice(members) {
   // ── 6. 視覺特效 ──
   OfficeEffects.register();
 
-  // ── 7. 啟動 GameLoop ──
+  // ── 7a. Canvas 點擊偵測（綁定一次）──
+  setupCanvasClickHandler();
+
+  // ── 7b. 啟動 GameLoop ──
   if (!GameLoop.isRunning()) {
     GameLoop.init('officeCanvas');
   } else {
