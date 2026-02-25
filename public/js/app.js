@@ -394,3 +394,28 @@ setInterval(async () => {
     }
   } catch {}
 }, 5000);
+
+// ── 閒聊系統（idle agent 互動）──────────────────────────────────────────────
+setInterval(() => {
+  if (currentView !== 'office') return;
+  const idleChars = OfficeCharacters.characters.filter(c =>
+    c.state === OfficeCharacters.STATES.IDLE && c.path.length === 0
+  );
+  if (idleChars.length >= 2 && Math.random() < 0.3) {
+    const [a, b] = idleChars.sort(() => Math.random() - 0.5).slice(0, 2);
+    // A 走到 B 旁邊
+    a.walkTo(b.tileCol + 1, b.tileRow, OfficeCharacters.STATES.CHATTING);
+    // 到達後開始聊天泡泡
+    setTimeout(() => {
+      if (a.state === OfficeCharacters.STATES.CHATTING) {
+        OfficeEffects.spawnBubble(a, '💬', 2000);
+        setTimeout(() => OfficeEffects.spawnBubble(b, '😄', 2000), 1500);
+        // 5 秒後各自回座
+        setTimeout(() => {
+          a.returnToSeat();
+          b.state = OfficeCharacters.STATES.IDLE;
+        }, 5000);
+      }
+    }, 3000);
+  }
+}, 30000);
